@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-
+import Fuse from 'fuse.js';
 import Product from './Product';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Products() {
   const { isPending, data, isError, error } = useQuery({
@@ -13,16 +13,25 @@ export default function Products() {
   });
 
   const [text, setText] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState([]);
+
+  useEffect(() => {
+    if (data?.data) {
+      const options = {
+        keys: ['title', 'category'],
+        threshold: 0.4,
+      };
+      const fuse = new Fuse(data.data, options);
+      const result =
+        text.trim().length > 2
+          ? fuse.search(text).map(({ item }) => item)
+          : data.data;
+      setFilteredProducts(result);
+    }
+  }, [text, data]);
 
   if (isPending) return <span>Loading...</span>;
   if (isError) return <span>{error.response.data.msg || error.message}</span>;
-
-  const filteredProducts =
-    text.trim().length > 2
-      ? data?.data.filter((p) => {
-          return p.title.toLowerCase().includes(text.toLowerCase());
-        })
-      : data?.data;
 
   return (
     <>
